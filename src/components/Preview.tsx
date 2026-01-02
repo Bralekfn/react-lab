@@ -353,7 +353,7 @@ export function Preview() {
     } catch (err: any) {
       setError(err.message);
     }
-  }, [files, html]);
+  }, [files, html, dependencies]);
 
   useEffect(() => {
     const timeoutId = setTimeout(updatePreview, 1000); // Debounce
