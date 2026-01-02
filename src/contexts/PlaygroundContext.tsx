@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { templates, type File } from '../data/templates';
+import { decompressFiles } from '../utils/url-compression';
+import { getSnippet } from '../lib/firebase';
 
 type TemplateKey = keyof typeof templates;
 
@@ -34,6 +36,14 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
 
   // Initialize state from localStorage or default to template
   const [files, setFiles] = useState<Record<string, File>>(() => {
+    // 1. Check for compressed code in hash (legacy support + current)
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    if (hash) {
+      const decompressed = decompressFiles(hash);
+      if (decompressed) return decompressed;
+    }
+    
+    // 2. Check localStorage
     try {
       const savedFiles = localStorage.getItem('react-lab-files-v2');
       return savedFiles ? JSON.parse(savedFiles) : templates.list.files;
@@ -42,8 +52,49 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       return templates.list.files;
     }
   });
+
+  // Handle /s/:id routing asynchronously
+  useEffect(() => {
+    const checkSharedSnippet = async () => {
+      const path = window.location.pathname;
+      const match = path.match(/^\/s\/([a-zA-Z0-9]+)$/);
+      
+      if (match) {
+        const shortId = match[1];
+        try {
+          const snippet = await getSnippet(shortId);
+          if (snippet) {
+            setFiles(snippet);
+            // Also set active file to App.jsx or first file
+            const newActive = snippet['App.jsx'] ? 'App.jsx' : Object.keys(snippet)[0];
+            setActiveFile(newActive);
+            // Clean URL but keep history
+            window.history.replaceState({}, '', `/s/${shortId}`);
+          } else {
+            // Snippet not found, maybe redirect to home or show error
+            // For now, just keep default files
+            console.warn('Snippet not found');
+            window.history.pushState({}, '', '/');
+          }
+        } catch (error) {
+          console.error('Error loading snippet:', error);
+        }
+      }
+    };
+
+    checkSharedSnippet();
+  }, []); // Run once on mount
   
   const [activeFile, setActiveFile] = useState<string>(() => {
+    // Initial active file logic
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    if (hash) {
+      const decompressed = decompressFiles(hash);
+      if (decompressed) {
+         return decompressed['App.jsx'] ? 'App.jsx' : Object.keys(decompressed)[0];
+      }
+    }
+
     try {
       const savedActive = localStorage.getItem('react-lab-active-file-v2');
       return savedActive || templates.list.activeFile;

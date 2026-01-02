@@ -1,11 +1,14 @@
 import { PlaygroundProvider } from './contexts/PlaygroundContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { Layout } from './components/Layout';
 
 function App() {
   return (
-    <PlaygroundProvider>
-      <Layout />
-    </PlaygroundProvider>
+    <ToastProvider>
+      <PlaygroundProvider>
+        <Layout />
+      </PlaygroundProvider>
+    </ToastProvider>
   );
 }
 

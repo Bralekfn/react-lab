@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { usePlayground } from '../contexts/PlaygroundContext';
-import { Moon, Sun, RefreshCw, Github, Menu } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import { Moon, Sun, RefreshCw, Github, Menu, Share2, Loader2 } from 'lucide-react';
+import { saveSnippet } from '../lib/firebase';
 
 export function Header() {
   const { 
@@ -7,8 +10,27 @@ export function Header() {
     toggleTheme, 
     refreshPreview,
     isSidebarOpen,
-    setIsSidebarOpen
+    setIsSidebarOpen,
+    files
   } = usePlayground();
+  
+  const { showToast } = useToast();
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    setIsSharing(true);
+    try {
+      const shortId = await saveSnippet(files);
+      const url = `${window.location.origin}/s/${shortId}`;
+      await navigator.clipboard.writeText(url);
+      showToast('Link copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Failed to share project:', error);
+      showToast('Failed to generate share link', 'error');
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <header className="h-16 border-b bg-white dark:bg-gray-950 dark:border-gray-800 flex items-center justify-between px-4 sticky top-0 z-10">
@@ -34,6 +56,15 @@ export function Header() {
             title="Refresh Preview"
           >
             <RefreshCw className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={handleShare}
+            disabled={isSharing}
+            className="p-2.5 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Share Project"
+          >
+            {isSharing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
           </button>
 
           <a
