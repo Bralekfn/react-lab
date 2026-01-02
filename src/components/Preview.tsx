@@ -135,6 +135,31 @@ export function Preview() {
             if (dependencyCache[path]) return;
             if (path === 'react' || path === 'react-dom' || path === 'react-dom/client' || path === 'react/jsx-runtime') return;
 
+            // Handle CSS imports specially
+            if (path.endsWith('.css')) {
+               const parts = path.split('/');
+               let pkgName = parts[0];
+               if (path.startsWith('@') && parts.length > 1) {
+                 pkgName = parts[0] + '/' + parts[1];
+               }
+
+               if (dependencies[pkgName]) {
+                 const version = dependencies[pkgName];
+                 const restPath = path.slice(pkgName.length);
+                 const url = \`https://esm.sh/\${pkgName}@\${version}\${restPath}\`; 
+                 
+                 if (!document.querySelector(\`link[href="\${url}"]\`)) {
+                   const link = document.createElement('link');
+                   link.rel = 'stylesheet';
+                   link.href = url;
+                   document.head.appendChild(link);
+                 }
+                 // Cache empty object for CSS
+                 dependencyCache[path] = {};
+                 return;
+               }
+            }
+
             // Find matching dependency
             const pkgName = Object.keys(dependencies).find(dep => 
               path === dep || path.startsWith(dep + '/')
@@ -179,7 +204,7 @@ export function Preview() {
             // Handle built-ins
             if (path === 'react') return window.React;
             if (path === 'react-dom') return window.ReactDOM;
-            if (path === 'react-dom/client') return window.ReactDOM;
+            if (path === 'react-dom/client') return window.ReactDOMClient;
             if (path === 'react/jsx-runtime') return window.JSXRuntime;
             
             // Check dependencies

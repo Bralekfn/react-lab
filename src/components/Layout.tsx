@@ -22,7 +22,7 @@ export function Layout() {
   } = usePlayground();
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
+    <div className="h-screen h-[100dvh] flex flex-col bg-background text-foreground supports-[height:100dvh]:h-[100dvh]">
       <Header />
 
       <div className="flex-1 overflow-hidden flex relative">
@@ -117,39 +117,41 @@ export function Layout() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden h-14 border-t bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800 flex items-center justify-around px-4 z-40">
-        <button
-          onClick={() => setMobileTab('editor')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-            mobileTab === 'editor'
-              ? 'text-indigo-600 dark:text-indigo-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
-        >
-          <Code className="w-5 h-5" />
-        </button>
-        
-        <button
-          onClick={() => setMobileTab('preview')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-            mobileTab === 'preview'
-              ? 'text-indigo-600 dark:text-indigo-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
-        >
-          <Eye className="w-5 h-5" />
-        </button>
+      <div className="md:hidden border-t bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800 z-40 pb-[env(safe-area-inset-bottom)]">
+        <div className="h-14 flex items-center justify-around px-4">
+          <button
+            onClick={() => setMobileTab('editor')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+              mobileTab === 'editor'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <Code className="w-5 h-5" />
+          </button>
+          
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+              mobileTab === 'preview'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <Eye className="w-5 h-5" />
+          </button>
 
-        <button
-          onClick={() => setMobileTab('terminal')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-            mobileTab === 'terminal'
-              ? 'text-indigo-600 dark:text-indigo-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
-        >
-          <TerminalIcon className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => setMobileTab('terminal')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+              mobileTab === 'terminal'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <TerminalIcon className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   );
