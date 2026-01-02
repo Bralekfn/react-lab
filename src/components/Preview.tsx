@@ -4,7 +4,7 @@ import { usePlayground } from '../contexts/PlaygroundContext';
 import { AlertCircle } from 'lucide-react';
 
 export function Preview() {
-  const { files, refreshKey } = usePlayground();
+  const { files, refreshKey, dependencies } = usePlayground();
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -29,6 +29,15 @@ export function Preview() {
             }
           }
         </script>
+        <script type="importmap">
+          {
+            "imports": {
+              "react": "https://esm.sh/react@18.2.0",
+              "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+              "react-dom": "https://esm.sh/react-dom@18.2.0"
+            }
+          }
+        </script>
         <style>
           body {
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
@@ -37,8 +46,6 @@ export function Preview() {
       </head>
       <body>
         <div id="root"></div>
-        <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
         <script>
           window.onerror = function(message, source, lineno, colno, error) {
             window.parent.postMessage({ type: 'ERROR', message: message }, '*');
@@ -73,12 +80,38 @@ export function Preview() {
       }
 
       // 2. Create the runner script
+      const dependenciesMap = JSON.stringify(dependencies);
+      
       const script = `
+        (async () => {
         try {
-          const { useState, useEffect, useRef, useMemo, useCallback } = React;
+          // Load React and ReactDOM first
+          const ReactModule = await import('react');
+          const ReactDOMModule = await import('react-dom/client');
+          
+          window.React = ReactModule.default || ReactModule;
+          window.ReactDOM = ReactDOMModule.default || ReactDOMModule;
+          
+          const { useState, useEffect, useRef, useMemo, useCallback } = window.React;
           
           const modules = {};
           const moduleCache = {};
+          const dependencyCache = {};
+          const dependencies = ${dependenciesMap};
+
+          // Pre-load dependencies
+          if (Object.keys(dependencies).length > 0) {
+            for (const [name, version] of Object.entries(dependencies)) {
+              try {
+                // Use esm.sh for dependencies
+                const url = \`https://esm.sh/\${name}@\${version}\`;
+                const module = await import(url);
+                dependencyCache[name] = module;
+              } catch (e) {
+                console.error(\`Failed to load dependency \${name}:\`, e);
+              }
+            }
+          }
           
           // Define modules
           ${Object.entries(modules).map(([name, code]) => `
@@ -90,10 +123,16 @@ export function Preview() {
           // Custom require function
           function require(path) {
             // Handle built-ins
-            if (path === 'react') return React;
-            if (path === 'react-dom') return ReactDOM;
-            if (path === 'react-dom/client') return ReactDOM;
+            if (path === 'react') return window.React;
+            if (path === 'react-dom') return window.ReactDOM;
+            if (path === 'react-dom/client') return window.ReactDOM;
             
+            // Check dependencies
+            if (dependencyCache[path]) {
+              const mod = dependencyCache[path];
+              return mod.default || mod;
+            }
+
             // Normalize path (simple version)
             const cleanPath = path.replace(/^\\.\\//, '').replace(/\\.(js|jsx|ts|tsx)$/, '');
             
@@ -132,8 +171,8 @@ export function Preview() {
             const RootComponent = EntryModule.default || EntryModule;
             
             if (RootComponent) {
-              const root = ReactDOM.createRoot(document.getElementById('root'));
-              root.render(React.createElement(RootComponent));
+              const root = window.ReactDOM.createRoot(document.getElementById('root'));
+              root.render(window.React.createElement(RootComponent));
             } else {
               throw new Error('App.jsx must default export a component');
             }
@@ -142,6 +181,7 @@ export function Preview() {
         } catch (err) {
           window.parent.postMessage({ type: 'ERROR', message: err.message }, '*');
         }
+        })();
       `;
 
       const iframe = iframeRef.current;

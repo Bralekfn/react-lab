@@ -19,10 +19,15 @@ interface PlaygroundContextType {
   clearProject: () => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
-  mobileTab: 'editor' | 'preview';
-  setMobileTab: (tab: 'editor' | 'preview') => void;
+  mobileTab: 'editor' | 'preview' | 'terminal';
+  setMobileTab: (tab: 'editor' | 'preview' | 'terminal') => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (isOpen: boolean) => void;
+  dependencies: Record<string, string>;
+  addDependency: (name: string, version?: string) => void;
+  removeDependency: (name: string) => void;
+  isTerminalOpen: boolean;
+  setIsTerminalOpen: (isOpen: boolean) => void;
 }
 
 const PlaygroundContext = createContext<PlaygroundContextType | undefined>(undefined);
@@ -31,8 +36,37 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>('list');
   const [refreshKey, setRefreshKey] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
+  const [mobileTab, setMobileTab] = useState<'editor' | 'preview' | 'terminal'>('editor');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(true);
+  
+  // Dependencies state
+  const [dependencies, setDependencies] = useState<Record<string, string>>(() => {
+    try {
+      const savedDeps = localStorage.getItem('react-lab-dependencies');
+      return savedDeps ? JSON.parse(savedDeps) : {};
+    } catch (error) {
+      console.error('Failed to load dependencies:', error);
+      return {};
+    }
+  });
+
+  // Save dependencies to localStorage
+  useEffect(() => {
+    localStorage.setItem('react-lab-dependencies', JSON.stringify(dependencies));
+  }, [dependencies]);
+
+  const addDependency = (name: string, version: string = 'latest') => {
+    setDependencies(prev => ({ ...prev, [name]: version }));
+  };
+
+  const removeDependency = (name: string) => {
+    setDependencies(prev => {
+      const newDeps = { ...prev };
+      delete newDeps[name];
+      return newDeps;
+    });
+  };
 
   // Initialize state from localStorage or default to template
   const [files, setFiles] = useState<Record<string, File>>(() => {
@@ -236,7 +270,12 @@ root.render(
         mobileTab,
         setMobileTab,
         isSidebarOpen,
-        setIsSidebarOpen
+        setIsSidebarOpen,
+        dependencies,
+        addDependency,
+        removeDependency,
+        isTerminalOpen,
+        setIsTerminalOpen
       }}
     >
       {children}

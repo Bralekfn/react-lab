@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePlayground } from '../contexts/PlaygroundContext';
 import { useToast } from '../contexts/ToastContext';
-import { Moon, Sun, RefreshCw, Github, Menu, Share2, Loader2 } from 'lucide-react';
+import { Moon, Sun, RefreshCw, Github, Menu, Share2, Loader2, Terminal } from 'lucide-react';
 import { saveSnippet } from '../lib/firebase';
 import { compressFiles } from '../utils/url-compression';
 
@@ -14,7 +14,9 @@ export function Header() {
     refreshPreview,
     isSidebarOpen,
     setIsSidebarOpen,
-    files
+    files,
+    isTerminalOpen,
+    setIsTerminalOpen
   } = usePlayground();
   
   const { showToast } = useToast();
@@ -88,6 +90,16 @@ export function Header() {
             title="Refresh Preview"
           >
             <RefreshCw className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+            className={`hidden md:block p-2.5 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors ${
+              isTerminalOpen ? 'bg-gray-100 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400' : ''
+            }`}
+            title="Toggle Terminal"
+          >
+            <Terminal className="w-5 h-5" />
           </button>
 
           <button
