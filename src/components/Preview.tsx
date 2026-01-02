@@ -34,7 +34,8 @@ export function Preview() {
             "imports": {
               "react": "https://esm.sh/react@18.2.0?dev",
               "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
-              "react-dom": "https://esm.sh/react-dom@18.2.0?dev"
+              "react-dom": "https://esm.sh/react-dom@18.2.0?dev",
+              "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime?dev"
             }
           }
         </script>
@@ -50,6 +51,12 @@ export function Preview() {
           window.onerror = function(message, source, lineno, colno, error) {
             window.parent.postMessage({ type: 'ERROR', message: message }, '*');
           };
+          window.process = window.process || {
+            env: {
+              NODE_ENV: 'development' 
+            }
+          };
+          window.global = window;
         </script>
       </body>
     </html>
@@ -61,14 +68,28 @@ export function Preview() {
       
       // 1. Transform all files
       const modules: Record<string, string> = {};
+      const usedImports = new Set<string>();
+      let cssContent = '';
       
       for (const file of Object.values(files)) {
+        if (file.name.endsWith('.css')) {
+          cssContent += `\n/* ${file.name} */\n${file.content}`;
+          continue;
+        }
+
         try {
           const result = transform(file.content, {
             presets: ['react', 'env'],
             filename: file.name,
           }).code;
           
+          // Find all require calls to identify external dependencies
+          const requireRegex = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+          let match;
+          while ((match = requireRegex.exec(result)) !== null) {
+            usedImports.add(match[1]);
+          }
+
           // Normalize path: remove ./, ensure .jsx or .js extension matching
           // We will use simple name matching for now
           modules[file.name] = result;
@@ -81,6 +102,7 @@ export function Preview() {
 
       // 2. Create the runner script
       const dependenciesMap = JSON.stringify(dependencies);
+      const importsList = JSON.stringify(Array.from(usedImports));
       
       const script = `
         (async () => {
@@ -89,10 +111,12 @@ export function Preview() {
           const ReactModule = await import('react');
           const ReactDOMModule = await import('react-dom');
           const ReactDOMClientModule = await import('react-dom/client');
+          const JSXRuntimeModule = await import('react/jsx-runtime');
           
           window.React = ReactModule.default || ReactModule;
           window.ReactDOM = ReactDOMModule.default || ReactDOMModule;
           window.ReactDOMClient = ReactDOMClientModule.default || ReactDOMClientModule;
+          window.JSXRuntime = JSXRuntimeModule;
           
           if (!window.React) {
             throw new Error('Failed to load React');
@@ -104,24 +128,44 @@ export function Preview() {
           const moduleCache = {};
           const dependencyCache = {};
           const dependencies = ${dependenciesMap};
+          const usedImports = ${importsList};
 
-          // Pre-load dependencies
-          if (Object.keys(dependencies).length > 0) {
-            for (const [name, version] of Object.entries(dependencies)) {
-              // Skip react and react-dom as they are already loaded
-              if (name === 'react' || name === 'react-dom') continue;
+          // Helper to load dependency
+          const loadDependency = async (path) => {
+            if (dependencyCache[path]) return;
+            if (path === 'react' || path === 'react-dom' || path === 'react-dom/client' || path === 'react/jsx-runtime') return;
 
+            // Find matching dependency
+            const pkgName = Object.keys(dependencies).find(dep => 
+              path === dep || path.startsWith(dep + '/')
+            );
+
+            if (pkgName) {
+              const version = dependencies[pkgName];
+              const subPath = path.slice(pkgName.length);
+              
               try {
                 // Use esm.sh for dependencies
-                // Add external=react,react-dom to prevent duplicate React instances
-                const url = \`https://esm.sh/\${name}@\${version}?external=react,react-dom\`;
+                // Added ?dev to ensure consistency with React imports
+                const url = \`https://esm.sh/\${pkgName}@\${version}\${subPath}?external=react,react-dom&dev\`;
+                console.log('[ReactLab] Fetching dependency:', url);
                 const module = await import(url);
-                dependencyCache[name] = module;
+                dependencyCache[path] = module;
+                console.log('[ReactLab] Successfully loaded:', path);
               } catch (e) {
-                console.error(\`Failed to load dependency \${name}:\`, e);
+                console.error(\`Failed to load dependency \${path}:\`, e);
+                // We don't cache the error, so retries might happen, but effectively it's broken
               }
             }
-          }
+          };
+
+          // Pre-load dependencies and used imports
+          const allImports = new Set([...Object.keys(dependencies), ...usedImports]);
+          console.log('[ReactLab] Loading imports:', Array.from(allImports));
+          
+          await Promise.all(Array.from(allImports).map(loadDependency));
+          
+          console.log('[ReactLab] Dependency cache keys:', Object.keys(dependencyCache));
           
           // Define modules
           ${Object.entries(modules).map(([name, code]) => `
@@ -136,18 +180,66 @@ export function Preview() {
             if (path === 'react') return window.React;
             if (path === 'react-dom') return window.ReactDOM;
             if (path === 'react-dom/client') return window.ReactDOM;
+            if (path === 'react/jsx-runtime') return window.JSXRuntime;
             
             // Check dependencies
             if (dependencyCache[path]) {
               const mod = dependencyCache[path];
-              // Return the module namespace but mark it as ES module for Babel interop
-              // This ensures named exports work (e.g. { toast } from 'react-toastify')
-              // and default exports work (e.g. import React from 'react')
-              return { ...mod, __esModule: true };
+              
+              // Handle ESM module namespace
+              // We create a new object and copy all properties
+              const exported = {};
+              
+              // Copy named exports
+              // Note: Module Namespace objects might need specific handling
+              const descriptors = Object.getOwnPropertyDescriptors(mod);
+              Object.defineProperties(exported, descriptors);
+              
+              // Handle default export for CJS interop
+              if (mod.default && typeof mod.default === 'object') {
+                const defaultDescriptors = Object.getOwnPropertyDescriptors(mod.default);
+                Object.defineProperties(exported, defaultDescriptors);
+              }
+              
+              // Ensure __esModule is true
+              exported.__esModule = true;
+              
+              // Debug logging for react-icons
+              if (path.includes('react-icons')) {
+                console.log('[ReactLab] Loaded ' + path + ':', {
+                  keys: Object.keys(exported).slice(0, 10), // Show first 10
+                  hasFaRegHeart: 'FaRegHeart' in exported
+                });
+              }
+
+              // Return a Proxy to warn about missing exports
+               return new Proxy(exported, {
+                 get(target, prop) {
+                   if (prop in target) {
+                     return target[prop];
+                   }
+                   
+                   // Skip internal properties and common checks
+                   if (typeof prop === 'string' && 
+                       prop !== 'then' && 
+                       prop !== 'default' && 
+                       prop !== '__esModule' &&
+                       !prop.startsWith('__')) {
+                     console.warn('[ReactLab] Warning: Module "' + path + '" does not have export "' + prop + '".');
+                   }
+                   
+                   return undefined;
+                 }
+               });
             }
 
             // Handle CSS imports from dependencies
             if (path.endsWith('.css')) {
+              // Check if it's a local file (starts with ./ or no / at all and not in dependencies)
+              // We assume local CSS is already injected via style tag, so we just return empty
+              const isLocal = path.startsWith('./') || path.startsWith('../') || (!path.includes('/') && !dependencies[path]);
+              if (isLocal) return {};
+
               const parts = path.split('/');
               let pkgName = parts[0];
               if (path.startsWith('@') && parts.length > 1) {
@@ -183,6 +275,10 @@ export function Preview() {
             );
             
             if (!moduleKey) {
+              // Check if it was a failed dependency
+              if (Object.keys(dependencies).some(dep => path === dep || path.startsWith(dep + '/'))) {
+                 throw new Error(\`Failed to resolve dependency '\${path}'. Check console for loading errors.\`);
+              }
               throw new Error(\`Cannot find module '\${path}'\`);
             }
             
@@ -226,7 +322,8 @@ export function Preview() {
       const iframe = iframeRef.current;
       if (!iframe) return;
       
-      iframe.srcdoc = html.replace('</body>', `<script>${script}</script></body>`);
+      const htmlWithCss = html.replace('</head>', `<style>${cssContent}</style></head>`);
+      iframe.srcdoc = htmlWithCss.replace('</body>', `<script>${script}</script></body>`);
       
     } catch (err: any) {
       setError(err.message);

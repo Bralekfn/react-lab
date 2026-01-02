@@ -15,7 +15,7 @@ export function FileTabs() {
     }
     
     let fileName = newFileName.trim();
-    if (!fileName.endsWith('.jsx') && !fileName.endsWith('.js') && !fileName.endsWith('.css') && !fileName.endsWith('.json')) {
+    if (!fileName.includes('.')) {
       fileName += '.jsx';
     }
     

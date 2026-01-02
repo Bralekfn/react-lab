@@ -220,12 +220,29 @@ root.render(
 
   const addFile = (fileName: string, content?: string) => {
     if (files[fileName]) return;
+
+    let language = 'javascript';
+    if (fileName.endsWith('.css')) language = 'css';
+    if (fileName.endsWith('.json')) language = 'json';
+    if (fileName.endsWith('.html')) language = 'html';
+
+    let defaultContent = content;
+    if (!defaultContent) {
+      if (fileName.endsWith('.css')) {
+        defaultContent = '/* Styles */\n.container {\n  padding: 1rem;\n}';
+      } else if (fileName.endsWith('.json')) {
+        defaultContent = '{}';
+      } else {
+        defaultContent = `import React from 'react';\n\nexport default function ${fileName.replace('.jsx', '').replace('.js', '')}() {\n  return <div>New Component</div>;\n}`;
+      }
+    }
+
     setFiles(prev => ({
       ...prev,
       [fileName]: {
         name: fileName,
-        language: 'javascript',
-        content: content || `import React from 'react';\n\nexport default function ${fileName.replace('.jsx', '').replace('.js', '')}() {\n  return <div>New Component</div>;\n}`
+        language,
+        content: defaultContent || ''
       }
     }));
     setActiveFile(fileName);

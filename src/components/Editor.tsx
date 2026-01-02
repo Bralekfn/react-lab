@@ -19,6 +19,14 @@ export function CodeEditor() {
     return <div className="h-full w-full bg-gray-50 dark:bg-[#1e1e1e] flex items-center justify-center text-gray-500">No file selected</div>;
   }
 
+  const getLanguage = (file: { name: string; language?: string }) => {
+    if (file.language) return file.language;
+    if (file.name.endsWith('.css')) return 'css';
+    if (file.name.endsWith('.json')) return 'json';
+    if (file.name.endsWith('.html')) return 'html';
+    return 'javascript';
+  };
+
   return (
     <div className="h-full w-full bg-gray-50 dark:bg-[#1e1e1e] flex flex-col">
       <FileTabs />
@@ -26,8 +34,8 @@ export function CodeEditor() {
         <Editor
           height="100%"
           path={currentFile.name} // Key to keeping model state distinct
-          defaultLanguage="javascript"
-          language="javascript"
+          defaultLanguage={getLanguage(currentFile)}
+          language={getLanguage(currentFile)}
           value={currentFile.content}
           onChange={(value) => updateFileContent(activeFile, value || '')}
           theme={theme === 'dark' ? 'vs-dark' : 'light'}
