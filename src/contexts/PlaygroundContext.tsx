@@ -44,10 +44,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   const [dependencies, setDependencies] = useState<Record<string, string>>(() => {
     try {
       const savedDeps = localStorage.getItem('react-lab-dependencies');
-      return savedDeps ? JSON.parse(savedDeps) : {};
+      return savedDeps ? JSON.parse(savedDeps) : (templates.list.dependencies || {});
     } catch (error) {
       console.error('Failed to load dependencies:', error);
-      return {};
+      return templates.list.dependencies || {};
     }
   });
 
@@ -167,6 +167,13 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     setSelectedTemplate(templateKey);
     setFiles(JSON.parse(JSON.stringify(templates[templateKey].files))); // Deep copy
     setActiveFile(templates[templateKey].activeFile);
+    
+    // Set dependencies if available in template
+    if (templates[templateKey].dependencies) {
+      setDependencies(templates[templateKey].dependencies || {});
+    } else {
+      setDependencies({});
+    }
   };
 
   const refreshPreview = () => {

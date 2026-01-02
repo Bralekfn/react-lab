@@ -68,6 +68,10 @@ A modern, fast, and visually appealing React Playground / Component Sandbox. Wri
 - **View Output**: Toggle the Terminal panel to debug your application.
 - **Share**: Click the Share button to generate a unique link for your code.
 
+## Credits
+
+- **Confetti Template**: Inspired by and based on work by [AyloSrd](https://github.com/AyloSrd).
+
 ## License
 
 MIT License

@@ -8,6 +8,7 @@ export interface Template {
   name: string;
   files: Record<string, File>;
   activeFile: string;
+  dependencies?: Record<string, string>;
 }
 
 export const templates: Record<string, Template> = {
@@ -129,8 +130,11 @@ export default function App() {
     }
   },
   list: {
-    name: "Todo List",
+    name: "Confetti",
     activeFile: "App.jsx",
+    dependencies: {
+      "js-confetti": "latest"
+    },
     files: {
       "index.js": {
         name: "index.js",
@@ -149,103 +153,73 @@ root.render(
       "App.jsx": {
         name: "App.jsx",
         language: "javascript",
-        content: `import React, { useState } from 'react';
-import TodoItem from './TodoItem';
+        content: `import React, { useRef, useState } from "react"; 
+import Confetti from "js-confetti"; 
+import "./style.css"; 
 
-export default function App() {
-  const [todos, setTodos] = useState([
-    { id: 1, text: 'Learn React', completed: true },
-    { id: 2, text: 'Build a playground', completed: false },
-    { id: 3, text: 'Share with friends', completed: false },
-  ]);
-  const [input, setInput] = useState('');
+const confetti = new Confetti(); 
 
-  const addTodo = (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    setTodos([...todos, { id: Date.now(), text: input, completed: false }]);
-    setInput('');
-  };
+const App = () => { 
+  const [count, setCount] = useState(0); 
 
-  const toggleTodo = (id) => {
-    setTodos(todos.map(t => 
-      t.id === id ? { ...t, completed: !t.completed } : t
-    ));
-  };
+  const handleClick = () => { 
+    confetti.addConfetti(); 
+    setCount((c) => c + 1); 
+  }; 
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden">
-        <div className="p-6 bg-indigo-600">
-          <h1 className="text-2xl font-bold text-white mb-2">My Tasks</h1>
-          <p className="text-indigo-200 text-sm">
-            {todos.filter(t => !t.completed).length} items remaining
-          </p>
-        </div>
-        
-        <div className="p-4">
-          <form onSubmit={addTodo} className="flex gap-2 mb-6">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Add a new task..."
-              className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Add
-            </button>
-          </form>
+  return ( 
+    <button className="btn" onClick={handleClick}> 
+      <span role="img" aria-label="react-emoji"> 
+        ⚛️ 
+      </span>{" "} 
+      {count} 
+    </button> 
+  ); 
+}; 
 
-          <div className="space-y-2">
-            {todos.map(todo => (
-              <TodoItem key={todo.id} todo={todo} onToggle={() => toggleTodo(todo.id)} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}`
+export default App;`
       },
-      "TodoItem.jsx": {
-        name: "TodoItem.jsx",
-        language: "javascript",
-        content: `import React from 'react';
+      "style.css": {
+        name: "style.css",
+        language: "css",
+        content: `/* style.css */ 
 
-export default function TodoItem({ todo, onToggle }) {
-  return (
-    <div
-      onClick={onToggle}
-      className={\`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors \${
-        todo.completed 
-          ? 'bg-gray-50 dark:bg-gray-800/50' 
-          : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-      }\`}
-    >
-      <div className={\`w-5 h-5 rounded-full border-2 flex items-center justify-center \${
-        todo.completed
-          ? 'border-green-500 bg-green-500'
-          : 'border-gray-300 dark:border-gray-600'
-      }\`}>
-        {todo.completed && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        )}
-      </div>
-      <span className={\`flex-1 \${
-        todo.completed 
-          ? 'text-gray-400 line-through' 
-          : 'text-gray-700 dark:text-gray-200'
-      }\`}>
-        {todo.text}
-      </span>
-    </div>
-  );
+body { 
+  font-family: 'Arial', sans-serif; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  height: 100vh; 
+  margin: 0; 
+  background-color: #282c34; 
+  color: white; 
+} 
+
+.btn { 
+  background-color: #61dafb; 
+  color: #282c34; 
+  font-size: 1.5rem; 
+  padding: 20px 40px; 
+  border: none; 
+  border-radius: 50px; 
+  cursor: pointer; 
+  transition: all 0.3s ease-in-out; 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+} 
+
+.btn:hover { 
+  background-color: #4fa3f7; 
+  transform: scale(1.05); 
+} 
+
+.btn:active { 
+  background-color: #3498db; 
+} 
+
+.btn span { 
+  font-size: 1.8rem; 
 }`
       }
     }
