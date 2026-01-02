@@ -32,9 +32,9 @@ export function Preview() {
         <script type="importmap">
           {
             "imports": {
-              "react": "https://esm.sh/react@18.2.0",
-              "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-              "react-dom": "https://esm.sh/react-dom@18.2.0"
+              "react": "https://esm.sh/react@18.2.0?dev",
+              "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
+              "react-dom": "https://esm.sh/react-dom@18.2.0?dev"
             }
           }
         </script>
@@ -87,11 +87,17 @@ export function Preview() {
         try {
           // Load React and ReactDOM first
           const ReactModule = await import('react');
-          const ReactDOMModule = await import('react-dom/client');
+          const ReactDOMModule = await import('react-dom');
+          const ReactDOMClientModule = await import('react-dom/client');
           
           window.React = ReactModule.default || ReactModule;
           window.ReactDOM = ReactDOMModule.default || ReactDOMModule;
+          window.ReactDOMClient = ReactDOMClientModule.default || ReactDOMClientModule;
           
+          if (!window.React) {
+            throw new Error('Failed to load React');
+          }
+
           const { useState, useEffect, useRef, useMemo, useCallback } = window.React;
           
           const modules = {};
@@ -102,9 +108,13 @@ export function Preview() {
           // Pre-load dependencies
           if (Object.keys(dependencies).length > 0) {
             for (const [name, version] of Object.entries(dependencies)) {
+              // Skip react and react-dom as they are already loaded
+              if (name === 'react' || name === 'react-dom') continue;
+
               try {
                 // Use esm.sh for dependencies
-                const url = \`https://esm.sh/\${name}@\${version}\`;
+                // Add external=react,react-dom to prevent duplicate React instances
+                const url = \`https://esm.sh/\${name}@\${version}?external=react,react-dom\`;
                 const module = await import(url);
                 dependencyCache[name] = module;
               } catch (e) {
@@ -130,7 +140,36 @@ export function Preview() {
             // Check dependencies
             if (dependencyCache[path]) {
               const mod = dependencyCache[path];
-              return mod.default || mod;
+              // Return the module namespace but mark it as ES module for Babel interop
+              // This ensures named exports work (e.g. { toast } from 'react-toastify')
+              // and default exports work (e.g. import React from 'react')
+              return { ...mod, __esModule: true };
+            }
+
+            // Handle CSS imports from dependencies
+            if (path.endsWith('.css')) {
+              const parts = path.split('/');
+              let pkgName = parts[0];
+              if (path.startsWith('@') && parts.length > 1) {
+                pkgName = parts[0] + '/' + parts[1];
+              }
+
+              if (dependencies[pkgName]) {
+                const version = dependencies[pkgName];
+                // Construct URL: https://esm.sh/pkg@version/path/to/file.css
+                // path is like "react-toastify/dist/ReactToastify.css"
+                // we want "react-toastify@version/dist/ReactToastify.css"
+                const restPath = path.slice(pkgName.length); // /dist/ReactToastify.css
+                const url = \`https://esm.sh/\${pkgName}@\${version}\${restPath}\`; 
+                
+                if (!document.querySelector(\`link[href="\${url}"]\`)) {
+                  const link = document.createElement('link');
+                  link.rel = 'stylesheet';
+                  link.href = url;
+                  document.head.appendChild(link);
+                }
+                return {};
+              }
             }
 
             // Normalize path (simple version)
@@ -171,7 +210,7 @@ export function Preview() {
             const RootComponent = EntryModule.default || EntryModule;
             
             if (RootComponent) {
-              const root = window.ReactDOM.createRoot(document.getElementById('root'));
+              const root = window.ReactDOMClient.createRoot(document.getElementById('root'));
               root.render(window.React.createElement(RootComponent));
             } else {
               throw new Error('App.jsx must default export a component');
