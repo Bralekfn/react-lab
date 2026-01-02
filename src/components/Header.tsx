@@ -3,6 +3,9 @@ import { usePlayground } from '../contexts/PlaygroundContext';
 import { useToast } from '../contexts/ToastContext';
 import { Moon, Sun, RefreshCw, Github, Menu, Share2, Loader2 } from 'lucide-react';
 import { saveSnippet } from '../lib/firebase';
+import { compressFiles } from '../utils/url-compression';
+
+const RATE_LIMIT_MS = 30000; // 30 seconds
 
 export function Header() {
   const { 
@@ -20,7 +23,36 @@ export function Header() {
   const handleShare = async () => {
     setIsSharing(true);
     try {
+      const currentCompressed = compressFiles(files);
+      
+      // Check for deduplication
+      const lastCode = localStorage.getItem('react-lab-last-share-code');
+      const lastId = localStorage.getItem('react-lab-last-share-id');
+      
+      if (currentCompressed === lastCode && lastId) {
+        const url = `${window.location.origin}/s/${lastId}`;
+        await navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard!', 'success');
+        return;
+      }
+
+      // Check rate limit
+      const lastTime = parseInt(localStorage.getItem('react-lab-last-share-time') || '0');
+      const timeSinceLastShare = Date.now() - lastTime;
+      
+      if (timeSinceLastShare < RATE_LIMIT_MS) {
+        const remainingSeconds = Math.ceil((RATE_LIMIT_MS - timeSinceLastShare) / 1000);
+        showToast(`Please wait ${remainingSeconds} seconds before creating a new link.`, 'error');
+        return;
+      }
+
       const shortId = await saveSnippet(files);
+      
+      // Update local storage
+      localStorage.setItem('react-lab-last-share-code', currentCompressed);
+      localStorage.setItem('react-lab-last-share-id', shortId);
+      localStorage.setItem('react-lab-last-share-time', Date.now().toString());
+
       const url = `${window.location.origin}/s/${shortId}`;
       await navigator.clipboard.writeText(url);
       showToast('Link copied to clipboard!', 'success');
