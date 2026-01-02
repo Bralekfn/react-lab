@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePlayground } from '../contexts/PlaygroundContext';
-import { X, Terminal as TerminalIcon, ChevronRight } from 'lucide-react';
+import { X, Terminal as TerminalIcon } from 'lucide-react';
 
 interface TerminalLine {
   type: 'command' | 'output' | 'error' | 'success';
