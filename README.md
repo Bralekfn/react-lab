@@ -1,17 +1,33 @@
 # ReactLab ⚛️
 
-A modern, fast, and visually appealing React Playground / Component Sandbox. Write React code in real-time and see live previews instantly.
+A modern, fast, and visually appealing React Playground / Component Sandbox. Write React code in real-time, manage dependencies, and see live previews instantly.
 
 ![ReactLab Preview](public/preview.png)
 
 ## Features
 
-- 🚀 **Live Preview**: Instant feedback as you type.
-- 📝 **Monaco Editor**: VS Code-like editing experience with syntax highlighting and IntelliSense.
-- 🎨 **Modern UI**: Clean, split-pane layout with dark/light mode support.
-- 🛠 **Templates**: Start quickly with pre-built templates (Counter, Card, Todo List).
-- 📦 **Babel Standalone**: In-browser JSX compilation.
-- 💅 **Tailwind CSS**: Built-in support for utility-first styling.
+### � Core Experience
+- **Live Preview**: Instant feedback as you type with hot reloading.
+- **Monaco Editor**: VS Code-like editing experience with syntax highlighting, IntelliSense, and minimap.
+- **Multi-file Support**: Create, edit, and delete multiple components and files (JS/JSX/TS/TSX).
+- **Modern UI**: Clean, resizable split-pane layout with persistent Dark/Light mode support.
+
+### 📦 Dependency Management
+- **NPM Packages**: Easily add external libraries (e.g., `react-toastify`, `lodash`, `framer-motion`) directly from the UI.
+- **CSS Injection**: Automatic support for package CSS files (e.g., `import 'react-toastify/dist/ReactToastify.css'`).
+- **Smart Caching**: Dependencies are cached for faster load times.
+
+### 🛠 Tools & Developer Experience
+- **Integrated Terminal**: Built-in console for viewing logs, warnings, and errors.
+- **Error Overlay**: Clear, descriptive error messages for both build-time and runtime issues.
+- **Templates**: Jumpstart your coding with pre-built templates (Counter, Product Card, Todo List).
+- **Code Sharing**: Share your snippets with others via unique URLs.
+- **Babel Standalone**: In-browser compilation supporting modern JavaScript and React features.
+- **Tailwind CSS**: Built-in support for utility-first styling without configuration.
+
+### 📱 Responsive Design
+- **Mobile Optimized**: Dedicated mobile view with tabbed navigation (Editor, Preview, Terminal).
+- **Desktop Enhanced**: Quick access tools and keyboard shortcuts.
 
 ## Tech Stack
 
@@ -19,8 +35,10 @@ A modern, fast, and visually appealing React Playground / Component Sandbox. Wri
 - **Editor**: @monaco-editor/react
 - **Styling**: Tailwind CSS
 - **Compiler**: @babel/standalone
+- **Package Resolution**: esm.sh
 - **Icons**: Lucide React
-- **Layout**: react-resizable-panels
+- **State Management**: React Context API
+- **Backend/Sharing**: Firebase
 
 ## Getting Started
 
@@ -45,9 +63,10 @@ A modern, fast, and visually appealing React Playground / Component Sandbox. Wri
 
 ## Usage
 
-- **Write Code**: Edit the `App` component in the left pane.
-- **Toggle Theme**: Switch between light and dark modes.
-- **Reset/Share**: Reset code to the template default or copy code to clipboard.
+- **Manage Files**: Use the file explorer sidebar to create new components.
+- **Add Dependencies**: Click the "Dependencies" section in the sidebar to search and add npm packages.
+- **View Output**: Toggle the Terminal panel to debug your application.
+- **Share**: Click the Share button to generate a unique link for your code.
 
 ## License
 
